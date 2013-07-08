@@ -28,7 +28,7 @@ var restler = require('restler');
 var sys = require('util');
 
 var HTMLFILE_DEFAULT = "index.html";
-var URLFILE_DEFAULT = "index.html";
+var URLFILE_DEFAULT = "notSet";
 var CHECKSFILE_DEFAULT = "checks.json";
 
 var assertFileExists = function(infile) {
@@ -41,6 +41,7 @@ var assertFileExists = function(infile) {
 };
 
 var result = null;
+
 var assertURLExists = function(url) {
     if(instr == null) {
         var instr = restler.get(url, {options:"buffer"}).on('complete', function (response) {
@@ -48,9 +49,10 @@ var assertURLExists = function(url) {
                 console.log("Error" +  response.message);
                 process.exit(1);
             }
-            console.log(response);
+            checkJson = checkHtmlFile(response, CHECKSFILE_DEFAULT, true);
 
-            return response;
+            var outJson = JSON.stringify(checkJson, null, 4);
+            console.log(outJson);
         });
     }
     return instr;
@@ -61,7 +63,6 @@ var cheerioHtmlFile = function(htmlfile) {
 };
 
 var cheerioResponse = function(response) {
-    console.log(result);
     return cheerio.load(response);
 };
 
@@ -69,9 +70,14 @@ var loadChecks = function(checksfile) {
     return JSON.parse(fs.readFileSync(checksfile));
 };
 
-var checkHtmlFile = function(htmlfile, checksfile) {
+var checkHtmlFile = function(htmlfile, checksfile, isUrl) {
+    isUrl = isUrl || false;
+    if(isUrl){
+        $ = cheerioResponse(htmlfile);
+    }else{
+        $ = cheerioHtmlFile(htmlfile);
+    }
 
-    if(typeof htmlfile == "string"){ $ = cheerioHtmlFile(htmlfile);}else {$ = cheerioResponse(htmlfile);}
     var checks = loadChecks(checksfile).sort();
     var out = {};
     for(var ii in checks) {
@@ -93,16 +99,16 @@ if(require.main == module) {
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
         .option('-u, --url <url_response>', 'Url to index.html', clone(assertURLExists), URLFILE_DEFAULT)
         .parse(process.argv);
+
     var checkJson = null;
 
-    if(program.url != null){
-        checkJson = checkHtmlFile(program.url, program.checks);
-    }else {
-        checkJson = checkHtmlFile(program.file, program.checks);
-    }
+    CHECKSFILE_DEFAULT = program.checks;//bad thing, never reassign a value too a constant ;)
 
-    var outJson = JSON.stringify(checkJson, null, 4);
-    console.log(outJson);
+    if(program.url == 'notSet'){
+        checkJson = checkHtmlFile(program.file, program.checks);
+        var outJson = JSON.stringify(checkJson, null, 4);
+        console.log(outJson);
+    }
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
