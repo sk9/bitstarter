@@ -25,7 +25,7 @@ var fs = require('fs');
 var program = require('commander');
 var cheerio = require('cheerio');
 var restler = require('restler');
-var sys = require('util');
+
 
 var HTMLFILE_DEFAULT = "index.html";
 var URLFILE_DEFAULT = "notSet";
@@ -49,7 +49,7 @@ var assertURLExists = function(url) {
                 console.log("Error" +  response.message);
                 process.exit(1);
             }
-            checkJson = checkHtmlFile(response, CHECKSFILE_DEFAULT, true);
+            checkJson = checkHtmlFile(response, program.checks, true);
 
             var outJson = JSON.stringify(checkJson, null, 4);
             console.log(outJson);
@@ -101,8 +101,6 @@ if(require.main == module) {
         .parse(process.argv);
 
     var checkJson = null;
-
-    CHECKSFILE_DEFAULT = program.checks;//bad thing, never reassign a value too a constant ;)
 
     if(program.url == 'notSet'){
         checkJson = checkHtmlFile(program.file, program.checks);
